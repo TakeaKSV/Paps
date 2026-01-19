@@ -198,3 +198,21 @@ button:focus-visible {
     min-width: 520px;
   }
 }
+
+@media (min-width: 901px) {
+  .app-nav-actions {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 12px;
+  }
+
+  .app-nav-actions button {
+    flex: 0 0 auto;
+  }
+}
+
+.ql-table-wrap table,
+.ql-table-wrap th,
+.ql-table-wrap td {
+  color: #1e293b;
+}
