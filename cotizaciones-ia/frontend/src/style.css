@@ -92,3 +92,109 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+
+@media (max-width: 900px) {
+  .app-nav {
+    padding: 12px 16px !important;
+  }
+
+  .app-nav-inner {
+    flex-wrap: wrap !important;
+  }
+
+  .app-nav-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .app-nav-actions button {
+    flex: 1 1 160px;
+  }
+
+  .app-user {
+    margin-left: 0 !important;
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .app-user > div {
+    text-align: left !important;
+  }
+
+  .qa-layout {
+    display: block !important;
+  }
+
+  .qa-chat {
+    border-right: none !important;
+  }
+
+  .qa-preview {
+    padding: 16px !important;
+  }
+
+  .ql-page {
+    padding: 16px !important;
+  }
+
+  .ql-header {
+    padding: 20px !important;
+  }
+
+  .ql-header-top {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 12px !important;
+  }
+
+  .ql-header-stats {
+    grid-template-columns: 1fr !important;
+  }
+
+  .ql-filters {
+    gap: 8px !important;
+  }
+
+  .ql-filters button {
+    flex: 1 1 150px;
+  }
+
+  .ql-card {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 16px;
+  }
+
+  .ql-card-title {
+    flex-wrap: wrap;
+    gap: 8px !important;
+  }
+
+  .ql-card-meta {
+    grid-template-columns: 1fr !important;
+  }
+
+  .ql-card-actions {
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+  .ql-card-actions select {
+    width: 100%;
+  }
+
+  .ql-card-actions button {
+    flex: 1 1 120px;
+  }
+
+  .ql-table-wrap {
+    overflow-x: auto;
+  }
+
+  .ql-table-wrap table {
+    min-width: 520px;
+  }
+}

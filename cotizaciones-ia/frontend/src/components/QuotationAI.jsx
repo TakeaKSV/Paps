@@ -651,7 +651,7 @@ const QuotationAI = ({ onQuotationSaved }) => {
 
   return (
     <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
-      <div style={{
+      <div className="qa-layout" style={{
         background: 'white',
         borderRadius: '16px',
         boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
@@ -661,7 +661,7 @@ const QuotationAI = ({ onQuotationSaved }) => {
         minHeight: '80vh'
       }}>
         {/* CHAT COLUMN */}
-        <div style={{ display: 'flex', flexDirection: 'column', borderRight: currentQuotation ? '1px solid #e2e8f0' : 'none' }}>
+        <div className="qa-chat" style={{ display: 'flex', flexDirection: 'column', borderRight: currentQuotation ? '1px solid #e2e8f0' : 'none' }}>
           <div style={{ background: 'linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%)', padding: '24px', color: 'white' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <Droplets size={40} />
@@ -774,7 +774,7 @@ const QuotationAI = ({ onQuotationSaved }) => {
 
         {/* PREVIEW COLUMN */}
         {currentQuotation && (
-          <div style={{ background: '#f8fafc', padding: '24px', overflowY: 'auto' }}>
+          <div className="qa-preview" style={{ background: '#f8fafc', padding: '24px', overflowY: 'auto' }}>
             {/* INFO CLIENTE */}
             <div style={{ background: 'white', padding: '20px', borderRadius: '12px', marginBottom: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
               <h3 style={{ fontSize: '15px', fontWeight: 'bold', marginBottom: '16px', color: '#0ea5e9', display: 'flex', alignItems: 'center', gap: '8px' }}>👤 Información del Cliente</h3>

@@ -585,10 +585,10 @@ const QuotationsList = () => {
   }
 
   return (
-    <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '24px' }}>
+    <div className="ql-page" style={{ maxWidth: '1400px', margin: '0 auto', padding: '24px' }}>
       <div style={{ background: 'white', borderRadius: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
-        <div style={{ background: 'linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%)', padding: '32px', color: 'white' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
+        <div className="ql-header" style={{ background: 'linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%)', padding: '32px', color: 'white' }}>
+          <div className="ql-header-top" style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
             <Droplets size={48} />
             <div>
               <h1 style={{ fontSize: '28px', fontWeight: 'bold', margin: 0 }}>Cotizaciones Guardadas</h1>
@@ -596,7 +596,7 @@ const QuotationsList = () => {
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+          <div className="ql-header-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
             <div style={{ background: 'rgba(255,255,255,0.2)', padding: '20px', borderRadius: '12px' }}>
               <div style={{ fontSize: '14px', opacity: 0.9, marginBottom: '8px' }}>Total Cotizaciones</div>
               <div style={{ fontSize: '32px', fontWeight: 'bold' }}>{filteredQuotations.length}</div>
@@ -605,7 +605,7 @@ const QuotationsList = () => {
         </div>
 
         <div style={{ padding: '24px' }}>
-          <div style={{ marginBottom: '24px', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+          <div className="ql-filters" style={{ marginBottom: '24px', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
             <button onClick={() => setFilterStatus('all')} style={{ padding: '10px 20px', border: filterStatus === 'all' ? '2px solid #0ea5e9' : '2px solid #e2e8f0', borderRadius: '8px', background: filterStatus === 'all' ? '#eff6ff' : 'white', color: filterStatus === 'all' ? '#0ea5e9' : '#64748b', cursor: 'pointer', fontWeight: '600' }}>
               Todas ({quotations.length})
             </button>
@@ -622,19 +622,19 @@ const QuotationsList = () => {
               <p style={{ fontSize: '18px' }}>No hay cotizaciones para mostrar</p>
             </div>
           ) : (
-            <div style={{ display: 'grid', gap: '16px' }}>
+            <div className="ql-list" style={{ display: 'grid', gap: '16px' }}>
               {filteredQuotations.map(quotation => (
                 <div key={quotation._id} style={{ border: '2px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden', transition: 'all 0.2s' }}>
-                  <div style={{ padding: '20px', background: '#f8fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '12px' }}>
+                  <div className="ql-card" style={{ padding: '20px', background: '#f8fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div className="ql-card-main" style={{ flex: 1 }}>
+                      <div className="ql-card-title" style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '12px' }}>
                         <h3 style={{ fontSize: '18px', fontWeight: 'bold', margin: 0, color: '#1e293b' }}>{quotation.quotation_number}</h3>
                         <span style={{ padding: '6px 12px', borderRadius: '6px', fontSize: '12px', fontWeight: '600', background: statusColors[quotation.status].bg, color: statusColors[quotation.status].text }}>
                           {statusColors[quotation.status].label}
                         </span>
                       </div>
                       
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', color: '#64748b', fontSize: '14px' }}>
+                      <div className="ql-card-meta" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', color: '#64748b', fontSize: '14px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <User size={16} />
                           <span>{quotation.client_name}</span>
@@ -650,7 +650,7 @@ const QuotationsList = () => {
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <div className="ql-card-actions" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                       <select value={quotation.status} onChange={(e) => updateStatus(quotation._id, e.target.value)} style={{ padding: '8px 12px', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', outline: 'none' }}>
                         <option value="pendiente">Pendiente</option>
                         <option value="enviada">Enviada</option>
@@ -845,7 +845,8 @@ const QuotationsList = () => {
                         <div>
                           <h4 style={{ fontSize: '15px', fontWeight: 'bold', marginBottom: '16px', color: '#0ea5e9' }}>Productos:</h4>
                           
-                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                          <div className="ql-table-wrap">
+                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                             <thead>
                               <tr style={{ background: '#f1f5f9' }}>
                                 <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>Descripción</th>
@@ -866,7 +867,8 @@ const QuotationsList = () => {
                                 </tr>
                               ))}
                             </tbody>
-                          </table>
+                            </table>
+                          </div>
 
                           {quotation.notes && (
                             <div style={{ marginTop: '20px', padding: '16px', background: '#FFF9E6', borderLeft: '4px solid #F4A100', borderRadius: '8px' }}>

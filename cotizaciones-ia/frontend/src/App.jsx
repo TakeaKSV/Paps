@@ -25,13 +25,13 @@ function App() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%)' }}>
-      <nav style={{
+      <nav className="app-nav" style={{
         background: 'white',
         borderBottom: '2px solid #0ea5e9',
         padding: '16px 24px',
         boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
       }}>
-        <div style={{
+        <div className="app-nav-inner" style={{
           maxWidth: '1400px',
           margin: '0 auto',
           display: 'flex',
@@ -51,46 +51,48 @@ function App() {
             <p style={{ margin: '4px 0 0 0', color: '#64748b', fontSize: '13px' }}>{user.companyAddress}</p>
           </div>
 
-          <button
-            onClick={() => setActiveView('create')}
-            style={{
-              padding: '10px 20px',
-              background: activeView === 'create' ? 'linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%)' : 'white',
-              color: activeView === 'create' ? 'white' : '#0ea5e9',
-              border: '2px solid #0ea5e9',
-              borderRadius: '10px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              fontWeight: '600',
-              transition: 'all 0.3s'
-            }}
-          >
-            <FileText size={18} />
-            Nueva Cotización
-          </button>
-          <button
-            onClick={() => setActiveView('list')}
-            style={{
-              padding: '10px 20px',
-              background: activeView === 'list' ? 'linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%)' : 'white',
-              color: activeView === 'list' ? 'white' : '#0ea5e9',
-              border: '2px solid #0ea5e9',
-              borderRadius: '10px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              fontWeight: '600',
-              transition: 'all 0.3s'
-            }}
-          >
-            <List size={18} />
-            Mis Cotizaciones
-          </button>
+          <div className="app-nav-actions">
+            <button
+              onClick={() => setActiveView('create')}
+              style={{
+                padding: '10px 20px',
+                background: activeView === 'create' ? 'linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%)' : 'white',
+                color: activeView === 'create' ? 'white' : '#0ea5e9',
+                border: '2px solid #0ea5e9',
+                borderRadius: '10px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontWeight: '600',
+                transition: 'all 0.3s'
+              }}
+            >
+              <FileText size={18} />
+              Nueva Cotización
+            </button>
+            <button
+              onClick={() => setActiveView('list')}
+              style={{
+                padding: '10px 20px',
+                background: activeView === 'list' ? 'linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%)' : 'white',
+                color: activeView === 'list' ? 'white' : '#0ea5e9',
+                border: '2px solid #0ea5e9',
+                borderRadius: '10px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontWeight: '600',
+                transition: 'all 0.3s'
+              }}
+            >
+              <List size={18} />
+              Mis Cotizaciones
+            </button>
+          </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginLeft: '12px' }}>
+          <div className="app-user" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginLeft: '12px' }}>
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontWeight: '600', color: '#0f172a', fontSize: '14px' }}>{user.signatureName}</div>
               <div style={{ fontSize: '12px', color: '#64748b' }}>{user.signatureTitle || 'Ejecutivo de ventas'}</div>
