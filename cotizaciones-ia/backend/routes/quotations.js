@@ -1,10 +1,20 @@
 import express from 'express';
 import Quotation from '../models/Quotation.js';
+import authMiddleware from '../middleware/authMiddleware.js';
+import productCatalog from '../config/productCatalog.js';
 
 const router = express.Router();
 
+const canAccessQuotation = (quotation, user) => {
+  if (!quotation) return false;
+  if (user.role === 'admin') return true;
+  return quotation.created_by?.toString() === user._id.toString();
+};
+
+router.use(authMiddleware);
+
 // FUNCIÓN PARA AGREGAR ACCESORIOS AUTOMÁTICAMENTE (AGRUPADOS)
-const addAutoAccessories = (items, productCatalog) => {
+const addAutoAccessories = (items) => {
   const accessoriesMap = {}; // Usar un mapa para agrupar accesorios
   
   items.forEach(item => {
@@ -92,10 +102,17 @@ const addAutoAccessories = (items, productCatalog) => {
 
 // POST /api/quotations/generate-with-ai - Generar cotización con IA (con soporte para eliminación)
 router.post('/generate-with-ai', async (req, res) => {
-  const { userMessage, productCatalog, currentItems } = req.body;
+  const { userMessage, currentItems } = req.body;
 
   if (!userMessage) {
     return res.status(400).json({ success: false, message: 'Se requiere un mensaje del usuario' });
+  }
+
+  if (!Object.keys(productCatalog || {}).length) {
+    return res.status(500).json({
+      success: false,
+      message: 'No hay catálogo de productos configurado. Pide al administrador que configure PRODUCT_CATALOG_BASE64 o data/productCatalog.json'
+    });
   }
 
   const maxRetries = 3;
@@ -294,7 +311,7 @@ IMPORTANTE:
         }));
         
         // Agregar accesorios automáticos para aspersores y válvulas
-        quotationData.items = addAutoAccessories(quotationData.items, productCatalog);
+        quotationData.items = addAutoAccessories(quotationData.items);
         
         console.log('✅ Accesorios automáticos agregados');
       }
@@ -370,6 +387,21 @@ router.post('/', async (req, res) => {
       status: req.body.status || 'pendiente'
     };
 
+    if (req.user) {
+      quotationData.created_by = req.user._id;
+      quotationData.owner_info = {
+        userId: req.user._id,
+        name: req.user.name,
+        email: req.user.email,
+        phone: req.user.phone,
+        rfc: req.user.rfc,
+        companyName: req.user.companyName,
+        companyAddress: req.user.companyAddress,
+        signatureName: req.user.signatureName,
+        signatureTitle: req.user.signatureTitle
+      };
+    }
+
     console.log('💾 Creando cotización en BD...');
 
     const quotation = new Quotation(quotationData);
@@ -409,6 +441,16 @@ router.patch('/:id', async (req, res) => {
     const quotationId = req.params.id;
     console.log(`📝 Actualizando cotización ${quotationId}:`, req.body);
 
+    const existingQuotation = await Quotation.findById(quotationId);
+    if (!existingQuotation) {
+      return res.status(404).json({ 
+        error: 'Cotización no encontrada' 
+      });
+    }
+    if (!canAccessQuotation(existingQuotation, req.user)) {
+      return res.status(403).json({ error: 'No tienes permiso para actualizar esta cotización' });
+    }
+
     // Recalcular totales si se modifican items
     let updateData = { ...req.body };
     
@@ -433,12 +475,6 @@ router.patch('/:id', async (req, res) => {
       { new: true, runValidators: true }
     );
 
-    if (!updatedQuotation) {
-      return res.status(404).json({ 
-        error: 'Cotización no encontrada' 
-      });
-    }
-
     console.log('✅ Cotización actualizada exitosamente');
     res.json(updatedQuotation);
 
@@ -455,7 +491,8 @@ router.patch('/:id', async (req, res) => {
 router.get('/', async (req, res) => {
   try {
     const { status, limit = 50, page = 1 } = req.query;
-    const query = status ? { status } : {};
+    const baseQuery = req.user.role === 'admin' ? {} : { created_by: req.user._id };
+    const query = status ? { ...baseQuery, status } : baseQuery;
 
     const quotations = await Quotation.find(query)
       .sort({ createdAt: -1 })
@@ -484,6 +521,9 @@ router.get('/:id', async (req, res) => {
     if (!quotation) {
       return res.status(404).json({ error: 'Cotización no encontrada' });
     }
+    if (!canAccessQuotation(quotation, req.user)) {
+      return res.status(403).json({ error: 'No tienes permiso para ver esta cotización' });
+    }
     res.json(quotation);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -494,14 +534,15 @@ router.get('/:id', async (req, res) => {
 router.patch('/:id/status', async (req, res) => {
   try {
     const { status } = req.body;
-    const quotation = await Quotation.findByIdAndUpdate(
-      req.params.id,
-      { status },
-      { new: true }
-    );
+    const quotation = await Quotation.findById(req.params.id);
     if (!quotation) {
       return res.status(404).json({ error: 'Cotización no encontrada' });
     }
+    if (!canAccessQuotation(quotation, req.user)) {
+      return res.status(403).json({ error: 'No tienes permiso para cambiar esta cotización' });
+    }
+    quotation.status = status;
+    await quotation.save();
     res.json(quotation);
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -511,15 +552,19 @@ router.patch('/:id/status', async (req, res) => {
 // Actualizar cotización completa (PUT)
 router.put('/:id', async (req, res) => {
   try {
-    const quotation = await Quotation.findByIdAndUpdate(
+    const quotation = await Quotation.findById(req.params.id);
+    if (!quotation) {
+      return res.status(404).json({ error: 'Cotización no encontrada' });
+    }
+    if (!canAccessQuotation(quotation, req.user)) {
+      return res.status(403).json({ error: 'No tienes permiso para actualizar esta cotización' });
+    }
+    const updatedQuotation = await Quotation.findByIdAndUpdate(
       req.params.id,
       req.body,
       { new: true, runValidators: true }
     );
-    if (!quotation) {
-      return res.status(404).json({ error: 'Cotización no encontrada' });
-    }
-    res.json(quotation);
+    res.json(updatedQuotation);
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
@@ -528,10 +573,14 @@ router.put('/:id', async (req, res) => {
 // Eliminar cotización
 router.delete('/:id', async (req, res) => {
   try {
-    const quotation = await Quotation.findByIdAndDelete(req.params.id);
+    const quotation = await Quotation.findById(req.params.id);
     if (!quotation) {
       return res.status(404).json({ error: 'Cotización no encontrada' });
     }
+    if (!canAccessQuotation(quotation, req.user)) {
+      return res.status(403).json({ error: 'No tienes permiso para eliminar esta cotización' });
+    }
+    await quotation.deleteOne();
     res.json({ message: 'Cotización eliminada exitosamente' });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -541,7 +590,10 @@ router.delete('/:id', async (req, res) => {
 // Obtener estadísticas
 router.get('/stats/summary', async (req, res) => {
   try {
+    const matchStages = req.user.role === 'admin' ? [] : [{ $match: { created_by: req.user._id } }];
+
     const stats = await Quotation.aggregate([
+      ...matchStages,
       {
         $group: {
           _id: '$status',
@@ -551,8 +603,11 @@ router.get('/stats/summary', async (req, res) => {
       }
     ]);
 
-    const totalQuotations = await Quotation.countDocuments();
+    const totalQuotations = await Quotation.countDocuments(
+      req.user.role === 'admin' ? {} : { created_by: req.user._id }
+    );
     const totalValue = await Quotation.aggregate([
+      ...matchStages,
       { $group: { _id: null, total: { $sum: '$total' } } }
     ]);
 

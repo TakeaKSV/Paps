@@ -31,7 +31,18 @@ const quotationSchema = new mongoose.Schema({
     enum: ['pendiente', 'enviada', 'aceptada', 'rechazada'], 
     default: 'pendiente' 
   },
-  created_by: { type: String, default: 'Sistema' }
+  created_by: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  owner_info: {
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    name: String,
+    email: String,
+    phone: String,
+    rfc: String,
+    companyName: String,
+    companyAddress: String,
+    signatureName: String,
+    signatureTitle: String
+  }
 }, {
   timestamps: true
 });

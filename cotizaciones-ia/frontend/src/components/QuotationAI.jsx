@@ -2,9 +2,10 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Send, Download, Loader2, Save, CheckCircle, Droplets, Mic, MicOff, Plus, Trash2, Edit2, X, Check } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { useAuth } from '../context/AuthContext';
+import { registerBankGothic } from '../utils/pdfFonts';
 
-
-const API_URL = 'http://localhost:5000/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const QuotationAI = ({ onQuotationSaved }) => {
   const [messages, setMessages] = useState([]);
@@ -34,64 +35,21 @@ const QuotationAI = ({ onQuotationSaved }) => {
 
   const messagesEndRef = useRef(null);
 
-  const productCatalog = {
-    "controlador 4 estaciones rain bird": { price: 2762.00, unit: "pieza", description: "Controlador de 4 estaciones Rain Bird", category: "Automatización" },
-    "controlador rain bird": { price: 2762.00, unit: "pieza", description: "Controlador de 4 estaciones Rain Bird", category: "Automatización" },
-    "contactor siemens": { price: 894.00, unit: "pieza", description: "Contactor Siemens", category: "Eléctrico" },
-    "caja para contactor": { price: 298.00, unit: "pieza", description: "Caja para contactor", category: "Eléctrico" },
-    "válvula solenoide 1": { price: 498.40, unit: "pieza", description: "Válvula Solenoide 1\"", category: "Válvulas" },
-    "válvula solenoide 1\"": { price: 498.40, unit: "pieza", description: "Válvula Solenoide 1\"", category: "Válvulas" },
-    "registro circular 6": { price: 107.35, unit: "pieza", description: "Registro circular de 6\"", category: "Válvulas" },
-    "registro circular 6\"": { price: 107.35, unit: "pieza", description: "Registro circular de 6\"", category: "Válvulas" },
-    "tubería pvc hco 1": { price: 17.81, unit: "metro", description: "Tubería PVC Hidráulico 1\"", category: "Tuberías" },
-    "tubería pvc hco 1\"": { price: 17.81, unit: "metro", description: "Tubería PVC Hidráulico 1\"", category: "Tuberías" },
-    "tubería pvc 1": { price: 17.81, unit: "metro", description: "Tubería PVC Hidráulico 1\"", category: "Tuberías" },
-    "tubería 1": { price: 17.81, unit: "metro", description: "Tubería PVC Hidráulico 1\"", category: "Tuberías" },
-    "aspersor unispray rain bird": { price: 43.10, unit: "pieza", description: "Aspersor Unispray Rain Bird", category: "Aspersores" },
-    "aspersor rain bird": { price: 43.10, unit: "pieza", description: "Aspersor Unispray Rain Bird", category: "Aspersores" },
-    "unispray": { price: 43.10, unit: "pieza", description: "Aspersor Unispray Rain Bird", category: "Aspersores" },
-    "boquilla van": { price: 29.53, unit: "pieza", description: "Boquilla Van", category: "Aspersores" },
-    "boquillas van": { price: 29.53, unit: "pieza", description: "Boquilla Van", category: "Aspersores" },
-    "manguera flexible swing pipe": { price: 24.81, unit: "metro", description: "Manguera flexible Swing Pipe", category: "Mangueras" },
-    "swing pipe": { price: 24.81, unit: "metro", description: "Manguera flexible Swing Pipe", category: "Mangueras" },
-    "manguera swing pipe": { price: 24.81, unit: "metro", description: "Manguera flexible Swing Pipe", category: "Mangueras" },
-    "codo 90 inserción 1/2": { price: 6.50, unit: "pieza", description: "Codo 90° x inserción 1/2\"", category: "Accesorios" },
-    "codo 90 1/2": { price: 6.50, unit: "pieza", description: "Codo 90° x inserción 1/2\"", category: "Accesorios" },
-    "codo 1 x 90": { price: 8.16, unit: "pieza", description: "Codo 1\" x 90°", category: "Accesorios" },
-    "codo 90 1": { price: 8.16, unit: "pieza", description: "Codo 1\" x 90°", category: "Accesorios" },
-    "codo 1\" 90°": { price: 8.16, unit: "pieza", description: "Codo 1\" x 90°", category: "Accesorios" },
-    "codo 1 x 45": { price: 7.95, unit: "pieza", description: "Codo 1\" x 45°", category: "Accesorios" },
-    "codo 45 1": { price: 7.95, unit: "pieza", description: "Codo 1\" x 45°", category: "Accesorios" },
-    "codo 1\" 45°": { price: 7.95, unit: "pieza", description: "Codo 1\" x 45°", category: "Accesorios" },
-    "cople pvc 1": { price: 7.18, unit: "pieza", description: "Cople PVC 1\"", category: "Accesorios" },
-    "cople 1": { price: 7.18, unit: "pieza", description: "Cople PVC 1\"", category: "Accesorios" },
-    "adaptador macho 1 pvc": { price: 13.76, unit: "pieza", description: "Adaptador macho 1\" PVC", category: "Accesorios" },
-    "adaptador macho 1": { price: 13.76, unit: "pieza", description: "Adaptador macho 1\" PVC", category: "Accesorios" },
-    "adaptador 1": { price: 13.76, unit: "pieza", description: "Adaptador macho 1\" PVC", category: "Accesorios" },
-    "tee pvc 1 x 1 x 1/2": { price: 17.10, unit: "pieza", description: "Tee PVC 1\" x 1\" x 1/2\"", category: "Accesorios" },
-    "tee 1 x 1 x 1/2": { price: 17.10, unit: "pieza", description: "Tee PVC 1\" x 1\" x 1/2\"", category: "Accesorios" },
-    "tee lisa 1": { price: 10.50, unit: "pieza", description: "Tee lisa 1\"", category: "Accesorios" },
-    "tee 1": { price: 10.50, unit: "pieza", description: "Tee lisa 1\"", category: "Accesorios" },
-    "tapón 1 pvc": { price: 7.30, unit: "pieza", description: "Tapón 1\" PVC", category: "Accesorios" },
-    "tapón 1": { price: 7.30, unit: "pieza", description: "Tapón 1\" PVC", category: "Accesorios" },
-    "limpiador weld on 1/2 litro": { price: 194.00, unit: "pieza", description: "Limpiador Weld On 1/2 litro", category: "Adhesivos" },
-    "limpiador weld on": { price: 194.00, unit: "pieza", description: "Limpiador Weld On 1/2 litro", category: "Adhesivos" },
-    "limpiador": { price: 194.00, unit: "pieza", description: "Limpiador Weld On 1/2 litro", category: "Adhesivos" },
-    "pegamento weld on 747 1/2 litro": { price: 217.00, unit: "pieza", description: "Pegamento Weld On 747 1/2 litro", category: "Adhesivos" },
-    "pegamento weld on 747": { price: 217.00, unit: "pieza", description: "Pegamento Weld On 747 1/2 litro", category: "Adhesivos" },
-    "pegamento weld on": { price: 217.00, unit: "pieza", description: "Pegamento Weld On 747 1/2 litro", category: "Adhesivos" },
-    "pegamento": { price: 217.00, unit: "pieza", description: "Pegamento Weld On 747 1/2 litro", category: "Adhesivos" },
-    "cinta de aislar": { price: 34.00, unit: "pieza", description: "Cinta de aislar", category: "Adhesivos" },
-    "cinta aislar": { price: 34.00, unit: "pieza", description: "Cinta de aislar", category: "Adhesivos" },
-    "teflón 3/4": { price: 38.00, unit: "pieza", description: "Teflón 3/4\"", category: "Adhesivos" },
-    "teflon": { price: 38.00, unit: "pieza", description: "Teflón 3/4\"", category: "Adhesivos" },
-    "cable calibre 18": { price: 4.98, unit: "metro", description: "Cable calibre 18", category: "Eléctrico" },
-    "cable cal 18": { price: 4.98, unit: "metro", description: "Cable calibre 18", category: "Eléctrico" },
-    "cable cal. 18": { price: 4.98, unit: "metro", description: "Cable calibre 18", category: "Eléctrico" },
-    "cable": { price: 4.98, unit: "metro", description: "Cable calibre 18", category: "Eléctrico" },
-    "poliducto 3/4": { price: 7.50, unit: "metro", description: "Poliducto 3/4\"", category: "Eléctrico" },
-    "poliducto": { price: 7.50, unit: "metro", description: "Poliducto 3/4\"", category: "Eléctrico" },
+  const buildOwnerInfo = () => {
+    if (!user) return null;
+    return {
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      companyName: user.companyName,
+      companyAddress: user.companyAddress,
+      rfc: user.rfc,
+      signatureName: user.signatureName,
+      signatureTitle: user.signatureTitle
+    };
   };
+  const { user, logout } = useAuth();
+
 
   useEffect(() => {
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
@@ -266,12 +224,19 @@ const QuotationAI = ({ onQuotationSaved }) => {
       headers: {
         "Content-Type": "application/json",
       },
+      credentials: 'include',
       body: JSON.stringify({
         userMessage,
-        productCatalog,
         currentItems: currentQuotation ? currentQuotation.items : []
       })
     });
+
+    if (response.status === 401 || response.status === 403) {
+      setIsLoading(false);
+      alert('Tu sesión expiró. Inicia nuevamente.');
+      await logout();
+      return;
+    }
 
     const responseText = await response.text();
     console.log('Respuesta del servidor:', responseText);
@@ -331,10 +296,13 @@ const QuotationAI = ({ onQuotationSaved }) => {
 
     // MANEJAR AGREGADO DE PRODUCTOS
     if (quotationData.success) {
+      const ownerInfo = currentQuotation?.owner_info || buildOwnerInfo();
+
       if (currentQuotation && currentQuotation.items && currentQuotation.items.length > 0) {
         const combinedQuotation = {
-          ...quotationData,
-          items: [...currentQuotation.items, ...quotationData.items]
+          ...currentQuotation,
+          items: [...currentQuotation.items, ...quotationData.items],
+          owner_info: ownerInfo
         };
         const recalculatedQuotation = recalculateTotals(combinedQuotation);
         setCurrentQuotation(recalculatedQuotation);
@@ -344,7 +312,10 @@ const QuotationAI = ({ onQuotationSaved }) => {
           quotation: recalculatedQuotation
         }]);
       } else {
-        const recalculatedQuotation = recalculateTotals(quotationData);
+        const recalculatedQuotation = recalculateTotals({
+          ...quotationData,
+          owner_info: ownerInfo
+        });
         setCurrentQuotation(recalculatedQuotation);
         setMessages(prev => [...prev, { 
           role: 'assistant', 
@@ -383,6 +354,7 @@ const QuotationAI = ({ onQuotationSaved }) => {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({
           date: currentQuotation.date,
           valid_until: currentQuotation.valid_until,
@@ -404,6 +376,13 @@ const QuotationAI = ({ onQuotationSaved }) => {
         })
       });
 
+      if (response.status === 401 || response.status === 403) {
+        alert('Tu sesión expiró. Inicia nuevamente.');
+        await logout();
+        setIsSaving(false);
+        return;
+      }
+
       if (!response.ok) {
         const errorData = await response.json();
         console.error('❌ Error del servidor:', errorData);
@@ -416,7 +395,8 @@ const QuotationAI = ({ onQuotationSaved }) => {
       setCurrentQuotation(prev => ({
         ...prev,
         quotation_number: saved.quotation_number,
-        _id: saved._id
+        _id: saved._id,
+        owner_info: saved.owner_info || prev?.owner_info || buildOwnerInfo()
       }));
       
       setShowSaveSuccess(true);
@@ -503,6 +483,12 @@ const QuotationAI = ({ onQuotationSaved }) => {
     const totalEnLetras = numeroALetras(currentQuotation.total);
     const fechaActual = new Date().toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' }).toUpperCase();
     const quotationNumber = currentQuotation.quotation_number || 'BORRADOR';
+    const ownerInfo = currentQuotation.owner_info || buildOwnerInfo();
+    const companyName = ownerInfo?.companyName || 'Sistemas de Riego para Jardines';
+    const companyAddress = ownerInfo?.companyAddress || 'PROPORCIONA TU DIRECCIÓN FISCAL';
+    const ownerRfc = ownerInfo?.rfc || 'RFC DESCONOCIDO';
+    const signatureName = ownerInfo?.signatureName || ownerInfo?.name || 'Representante Autorizado';
+    const signatureTitle = ownerInfo?.signatureTitle || '';
 
     // Crear documento PDF
     const doc = new jsPDF({
@@ -510,6 +496,8 @@ const QuotationAI = ({ onQuotationSaved }) => {
       unit: 'mm',
       format: 'letter'
     });
+
+    registerBankGothic(doc);
 
     let yPos = 15;
 
@@ -522,22 +510,22 @@ const QuotationAI = ({ onQuotationSaved }) => {
       // HEADER
       yPos = 20;
       doc.setFontSize(11);
-      doc.setFont('helvetica', 'bold');
+      doc.setFont('BankGothicLtBT', 'normal');
       doc.setTextColor(0, 0, 0);
-      doc.text('Sistemas de Riego para Jardines', 105, yPos, { align: 'center' });
+      doc.text(companyName.toUpperCase(), 105, yPos, { align: 'center' });
       
       yPos += 6;
       doc.setFontSize(9);
       doc.setTextColor(132, 150, 176);
-      doc.text('PROL. URREA 119 FRACC. CHAPULTEPEC, DURANGO, DGO.', 105, yPos, { align: 'center' });
+      doc.text(companyAddress.toUpperCase(), 105, yPos, { align: 'center' });
       
       yPos += 4;
-      doc.text('RFC SAVC750926K28', 105, yPos, { align: 'center' });
+      doc.text(`RFC ${ownerRfc.toUpperCase()}`, 105, yPos, { align: 'center' });
       
       // FECHA
       yPos += 12;
       doc.setTextColor(0, 0, 0);
-      doc.setFont('helvetica', 'bold');
+      doc.setFont('helvetica', 'normal');
       doc.text(fechaActual, 200, yPos, { align: 'right' });
       
       // CLIENTE
@@ -644,7 +632,11 @@ const QuotationAI = ({ onQuotationSaved }) => {
       doc.setLineWidth(0.5);
       doc.line(65, firmaY, 150, firmaY);
       doc.setFontSize(10);
-      doc.text('ING. CESAR ALEJANDRO SARMIENTO VELASQUEZ.', 107.5, firmaY + 5, { align: 'center' });
+      doc.text(signatureName.toUpperCase(), 107.5, firmaY + 5, { align: 'center' });
+      if (signatureTitle) {
+        doc.setFontSize(9);
+        doc.text(signatureTitle.toUpperCase(), 107.5, firmaY + 10, { align: 'center' });
+      }
 
       // GUARDAR PDF
       doc.save(`Cotizacion-${quotationNumber}.pdf`);

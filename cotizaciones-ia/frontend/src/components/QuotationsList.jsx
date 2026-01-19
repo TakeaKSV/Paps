@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Trash2, Download, ChevronDown, ChevronUp, Calendar, DollarSign, User, Droplets, Edit2, X, Check, Save, Plus } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import bankGothicBase64 from '../../utils/customFont';
+import { registerBankGothic } from '../utils/pdfFonts';
+import { useAuth } from '../context/AuthContext';
 
-const API_URL = 'http://localhost:5000/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const QuotationsList = () => {
+  const { user, logout } = useAuth();
   const [quotations, setQuotations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState(null);
@@ -17,13 +19,37 @@ const QuotationsList = () => {
   const [editingData, setEditingData] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
 
+  const handleUnauthorized = async () => {
+    alert('Tu sesión expiró. Inicia nuevamente.');
+    await logout();
+  };
+
+  const getOwnerInfo = (quotation) => {
+    if (quotation?.owner_info) return quotation.owner_info;
+    if (!user) return null;
+    return {
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      companyName: user.companyName,
+      companyAddress: user.companyAddress,
+      rfc: user.rfc,
+      signatureName: user.signatureName,
+      signatureTitle: user.signatureTitle
+    };
+  };
+
   useEffect(() => {
     fetchQuotations();
   }, []);
 
   const fetchQuotations = async () => {
     try {
-      const response = await fetch(`${API_URL}/quotations?limit=100`);
+      const response = await fetch(`${API_URL}/quotations?limit=100`, { credentials: 'include' });
+      if (response.status === 401 || response.status === 403) {
+        await handleUnauthorized();
+        return;
+      }
       const data = await response.json();
       setQuotations(data.quotations || []);
     } catch (error) {
@@ -37,7 +63,11 @@ const QuotationsList = () => {
     if (!window.confirm('¿Estás seguro de eliminar esta cotización?')) return;
     
     try {
-      await fetch(`${API_URL}/quotations/${id}`, { method: 'DELETE' });
+      const response = await fetch(`${API_URL}/quotations/${id}`, { method: 'DELETE', credentials: 'include' });
+      if (response.status === 401 || response.status === 403) {
+        await handleUnauthorized();
+        return;
+      }
       fetchQuotations();
     } catch (error) {
       console.error('Error:', error);
@@ -46,11 +76,16 @@ const QuotationsList = () => {
 
   const updateStatus = async (id, newStatus) => {
     try {
-      await fetch(`${API_URL}/quotations/${id}/status`, {
+      const response = await fetch(`${API_URL}/quotations/${id}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ status: newStatus })
       });
+      if (response.status === 401 || response.status === 403) {
+        await handleUnauthorized();
+        return;
+      }
       fetchQuotations();
     } catch (error) {
       console.error('Error:', error);
@@ -89,10 +124,15 @@ const QuotationsList = () => {
       const response = await fetch(`${API_URL}/quotations/${editingId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(editingData)
       });
 
       if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          await handleUnauthorized();
+          return;
+        }
         throw new Error('Error al actualizar cotización');
       }
 
@@ -208,6 +248,12 @@ const QuotationsList = () => {
   const totalEnLetras = numeroALetras(quotation.total);
   const fechaActual = quotation.date ? quotation.date.toUpperCase() : new Date().toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' }).toUpperCase();
   const quotationNumber = quotation.quotation_number || 'BORRADOR';
+  const ownerInfo = getOwnerInfo(quotation) || {};
+  const companyName = (ownerInfo.companyName || 'Sistemas de Riego para Jardines').toUpperCase();
+  const companyAddress = (ownerInfo.companyAddress || 'PROPORCIONA TU DIRECCIÓN FISCAL').toUpperCase();
+  const ownerRfc = `RFC ${ (ownerInfo.rfc || 'RFC DESCONOCIDO').toUpperCase() }`;
+  const signatureName = (ownerInfo.signatureName || ownerInfo.name || 'Representante Autorizado').toUpperCase();
+  const signatureTitle = ownerInfo.signatureTitle ? ownerInfo.signatureTitle.toUpperCase() : '';
 
   // Cargar logo primero
   const logoImg = new Image();
@@ -222,6 +268,8 @@ const QuotationsList = () => {
       format: 'letter'
     });
 
+    registerBankGothic(doc);
+
     let yPos = 20;
 
     // AGREGAR LOGO
@@ -233,25 +281,24 @@ const QuotationsList = () => {
 
     // HEADER
     doc.setFontSize(13);
-    doc.setFont('helvetica', 'bold');
+    doc.setFont('BankGothicLtBT', 'normal');
     doc.setTextColor(0, 0, 0);
-    // Usar espaciado entre letras simulado con espacios
-    doc.text('R I E G O   O R N A M E N T A L', 105, yPos, { align: 'center' });
+    doc.text(companyName, 105, yPos, { align: 'center' });
     
     // DIRECCIÓN Y RFC - Fuente más estrecha
     yPos += 7;
     doc.setFontSize(8.5);
-    doc.setFont('helvetica', 'bold');
+    doc.setFont('BankGothicLtBT', 'normal');
     doc.setTextColor(132, 150, 176);
-    doc.text('P R O L .  U R R E A  1 1 9  F R A C C .  C H A P U L T E P E C ,  D U R A N G O ,  D G O .', 105, yPos, { align: 'center' });
+    doc.text(companyAddress, 105, yPos, { align: 'center' });
     
     yPos += 4;
-    doc.text('R F C  S A V C 7 5 0 9 2 6 K 2 8', 105, yPos, { align: 'center' });
+    doc.text(ownerRfc, 105, yPos, { align: 'center' });
     
     // FECHA
     yPos += 10;
     doc.setTextColor(0, 0, 0);
-    doc.setFont('helvetica', 'bold');
+    doc.setFont('helvetica', 'normal');
     doc.text(fechaActual, 200, yPos, { align: 'right' });
     
     // CLIENTE
@@ -363,7 +410,11 @@ const QuotationsList = () => {
     doc.setLineWidth(0.5);
     doc.line(65, firmaY, 150, firmaY);
     doc.setFontSize(10);
-    doc.text('ING. CESAR ALEJANDRO SARMIENTO VELASQUEZ.', 107.5, firmaY + 5, { align: 'center' });
+    doc.text(signatureName, 107.5, firmaY + 5, { align: 'center' });
+    if (signatureTitle) {
+      doc.setFontSize(9);
+      doc.text(signatureTitle, 107.5, firmaY + 10, { align: 'center' });
+    }
 
     // GUARDAR PDF
     doc.save(`Cotizacion-${quotationNumber}.pdf`);
@@ -379,26 +430,28 @@ const QuotationsList = () => {
       format: 'letter'
     });
 
+    registerBankGothic(doc);
+
     let yPos = 20;
 
     // HEADER (sin logo)
     doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
+    doc.setFont('BankGothicLtBT', 'normal');
     doc.setTextColor(0, 0, 0);
-    doc.text('Sistemas de Riego para Jardines', 105, yPos, { align: 'center' });
+    doc.text(companyName, 105, yPos, { align: 'center' });
     
     yPos += 6;
     doc.setFontSize(9);
     doc.setTextColor(132, 150, 176);
-    doc.text('PROL. URREA 119 FRACC. CHAPULTEPEC, DURANGO, DGO.', 105, yPos, { align: 'center' });
+    doc.text(companyAddress, 105, yPos, { align: 'center' });
     
     yPos += 4;
-    doc.text('RFC SAVC750926K28', 105, yPos, { align: 'center' });
+    doc.text(ownerRfc, 105, yPos, { align: 'center' });
     
     // FECHA
     yPos += 10;
     doc.setTextColor(0, 0, 0);
-    doc.setFont('helvetica', 'bold');
+    doc.setFont('helvetica', 'normal');
     doc.text(fechaActual, 200, yPos, { align: 'right' });
     
     // CLIENTE
@@ -502,7 +555,11 @@ const QuotationsList = () => {
     doc.setLineWidth(0.5);
     doc.line(65, firmaY, 150, firmaY);
     doc.setFontSize(10);
-    doc.text('ING. CESAR ALEJANDRO SARMIENTO VELASQUEZ.', 107.5, firmaY + 5, { align: 'center' });
+    doc.text(signatureName, 107.5, firmaY + 5, { align: 'center' });
+    if (signatureTitle) {
+      doc.setFontSize(9);
+      doc.text(signatureTitle, 107.5, firmaY + 10, { align: 'center' });
+    }
 
     doc.save(`Cotizacion-${quotationNumber}.pdf`);
   };
