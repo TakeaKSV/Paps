@@ -15,13 +15,19 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 app.set('trust proxy', 1);
 const FRONTEND_URL = process.env.FRONTEND_URL;
+const allowedOrigins = FRONTEND_URL.split(',').map((origin) => origin.trim()).filter(Boolean);
 app.use(helmet({
   crossOriginEmbedderPolicy: false,
   contentSecurityPolicy: false
 }));
 
 app.use(cors({
-  origin: FRONTEND_URL,
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error('Origen no permitido por CORS'));
+  },
   credentials: true
 }));
 

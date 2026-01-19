@@ -17,10 +17,11 @@ const signToken = (userId) => {
 
 const sendAuthResponse = (res, user, message = 'Autenticado correctamente') => {
   const token = signToken(user._id);
+  const isProd = process.env.NODE_ENV === 'production';
   const cookieOptions = {
     httpOnly: true,
-    secure: secure,
-    sameSite: 'none',
+    secure: isProd,
+    sameSite: isProd ? 'none' : 'lax',
     maxAge: 1000 * 60 * 60 * 12 // 12 horas
   };
 
