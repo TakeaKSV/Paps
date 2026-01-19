@@ -16,6 +16,11 @@ router.use(authMiddleware);
 // FUNCIÓN PARA AGREGAR ACCESORIOS AUTOMÁTICAMENTE (AGRUPADOS)
 const addAutoAccessories = (items) => {
   const accessoriesMap = {}; // Usar un mapa para agrupar accesorios
+  const normalizedDescriptions = items.map(item =>
+    (item.description || '').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '')
+  );
+
+  const hasExistingAccessory = (predicate) => normalizedDescriptions.some(predicate);
   
   items.forEach(item => {
     const description = item.description.toLowerCase();
@@ -30,7 +35,7 @@ const addAutoAccessories = (items) => {
       
       // Agregar 45cm de Swing Pipe por cada aspersor
       const swingPipeKey = 'swing_pipe';
-      if (!accessoriesMap[swingPipeKey]) {
+      if (!accessoriesMap[swingPipeKey] && !hasExistingAccessory(desc => desc.includes('swing pipe') || desc.includes('manguera flexible'))) {
         accessoriesMap[swingPipeKey] = {
           description: 'Manguera flexible Swing Pipe',
           quantity: 0,
@@ -43,7 +48,7 @@ const addAutoAccessories = (items) => {
       
       // Agregar 2 codos funnypipe por cada aspersor
       const codoKey = 'codo_funnypipe';
-      if (!accessoriesMap[codoKey]) {
+      if (!accessoriesMap[codoKey] && !hasExistingAccessory(desc => desc.includes('codo') && desc.includes('funnypipe'))) {
         accessoriesMap[codoKey] = {
           description: 'Codo 90° x inserción 1/2" (funnypipe)',
           quantity: 0,
@@ -56,7 +61,7 @@ const addAutoAccessories = (items) => {
       
       // Agregar 1 tee con rosca por cada aspersor
       const teeKey = 'tee_rosca';
-      if (!accessoriesMap[teeKey]) {
+      if (!accessoriesMap[teeKey] && !hasExistingAccessory(desc => desc.includes('tee') && desc.includes('rosca'))) {
         accessoriesMap[teeKey] = {
           description: 'Tee PVC 1" x 1" x 1/2" con rosca',
           quantity: 0,
@@ -78,7 +83,7 @@ const addAutoAccessories = (items) => {
       
       // Agregar 1 registro circular de 6" por cada válvula
       const registroKey = 'registro_6';
-      if (!accessoriesMap[registroKey]) {
+      if (!accessoriesMap[registroKey] && !hasExistingAccessory(desc => desc.includes('registro') && desc.includes('6'))) {
         accessoriesMap[registroKey] = {
           description: 'Registro circular de 6"',
           quantity: 0,
