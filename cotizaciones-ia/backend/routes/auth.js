@@ -19,8 +19,8 @@ const sendAuthResponse = (res, user, message = 'Autenticado correctamente') => {
   const token = signToken(user._id);
   const cookieOptions = {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
+    secure: secure,
+    sameSite: 'none',
     maxAge: 1000 * 60 * 60 * 12 // 12 horas
   };
 
