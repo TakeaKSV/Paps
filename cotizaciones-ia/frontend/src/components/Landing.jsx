@@ -16,10 +16,10 @@ import {
 } from 'lucide-react';
 
 const COMPANY = {
-  name: 'AquaJardín',
+  name: 'Jardineria Ornamental',
   tagline: 'Sistemas de riego y jardinería profesional',
   phone: '(618) 123-4567',
-  email: 'contacto@aquajardin.mx',
+  email: 'jardineriaornamental1@gmail.com',
   address: 'Durango, Dgo., México'
 };
 
