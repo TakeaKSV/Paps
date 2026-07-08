@@ -3,10 +3,12 @@ import { FileText, List, Droplets, LogOut } from 'lucide-react';
 import QuotationAI from './components/QuotationAI';
 import QuotationsList from './components/QuotationsList';
 import Login from './components/Login';
+import Landing from './components/Landing';
 import { useAuth } from './context/AuthContext';
 
 function App() {
   const [activeView, setActiveView] = useState('create');
+  const [showLogin, setShowLogin] = useState(false);
   const { user, loading, logout } = useAuth();
 
   if (loading) {
@@ -20,7 +22,10 @@ function App() {
   }
 
   if (!user) {
-    return <Login />;
+    if (!showLogin) {
+      return <Landing onEnter={() => setShowLogin(true)} />;
+    }
+    return <Login onBack={() => setShowLogin(false)} />;
   }
 
   return (

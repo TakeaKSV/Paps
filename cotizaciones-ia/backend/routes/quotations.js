@@ -389,6 +389,7 @@ router.post('/', async (req, res) => {
       subtotalWithManoObra: req.body.subtotalWithManoObra || req.body.subtotal,
       total: req.body.total,
       notes: req.body.notes || '',
+      quotation_type: req.body.quotation_type || 'instalacion_riego',
       status: req.body.status || 'pendiente'
     };
 

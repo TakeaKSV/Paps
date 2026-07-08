@@ -26,7 +26,8 @@ const quotationSchema = new mongoose.Schema({
   subtotalWithManoObra: { type: Number, default: 0 },
   total: { type: Number, required: true },
   notes: { type: String },
-  status: { 
+  quotation_type: { type: String, default: 'instalacion_riego' },
+  status: {
     type: String, 
     enum: ['pendiente', 'enviada', 'aceptada', 'rechazada'], 
     default: 'pendiente' 

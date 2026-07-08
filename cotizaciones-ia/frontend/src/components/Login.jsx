@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Droplets, Lock } from 'lucide-react';
+import { Droplets, Lock, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
-const Login = () => {
+const Login = ({ onBack }) => {
   const { login, error } = useAuth();
   const [form, setForm] = useState({ rfc: '', password: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -34,6 +34,28 @@ const Login = () => {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%)', padding: '20px' }}>
       <div style={{ width: '100%', maxWidth: '420px', background: 'white', borderRadius: '18px', padding: '32px', boxShadow: '0 12px 45px rgba(14,165,233,0.25)' }}>
+        {onBack && (
+          <button
+            type="button"
+            onClick={onBack}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              background: 'none',
+              border: 'none',
+              color: '#0ea5e9',
+              cursor: 'pointer',
+              fontWeight: '600',
+              fontSize: '13px',
+              padding: 0,
+              marginBottom: '16px'
+            }}
+          >
+            <ArrowLeft size={16} />
+            Volver al inicio
+          </button>
+        )}
         <div style={{ textAlign: 'center', marginBottom: '24px' }}>
           <div style={{ width: '64px', height: '64px', borderRadius: '16px', background: '#e0f2fe', margin: '0 auto 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0ea5e9' }}>
             <Droplets size={32} />

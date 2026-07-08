@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Trash2, Download, ChevronDown, ChevronUp, Calendar, DollarSign, User, Droplets, Edit2, X, Check, Save, Plus } from 'lucide-react';
+import { Trash2, Download, ChevronDown, ChevronUp, Calendar, DollarSign, User, Droplets, Edit2, X, Check, Save, Plus, Link, FilePlus } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { registerBankGothic } from '../utils/pdfFonts';
 import { useAuth } from '../context/AuthContext';
+import QuotationManual from './QuotationManual';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -18,6 +19,36 @@ const QuotationsList = () => {
   const [editingId, setEditingId] = useState(null);
   const [editingData, setEditingData] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [combiningFromIndex, setCombiningFromIndex] = useState(null);
+  const [showManual, setShowManual] = useState(false);
+
+  const QUOTATION_TYPES = {
+    instalacion_riego: {
+      label: 'Instalación de sistema de riego',
+      intro: (address) => `Por medio de la presente me permito dirigir la siguiente cotización para la instalación del sistema de riego${address ? ' en ' + address : ''}. Queda como sigue:`,
+      manoObraLabel: 'Instalación de sistema de riego. Incluye: cuadrilla de personal especializado, apertura y relleno de cepas, suministro e instalación de tuberías, válvulas solenoides y de control, conexiones eléctricas, aspersores y difusores, pruebas de presión, programación del controlador y puesta en marcha.'
+    },
+    venta_material: {
+      label: 'Venta de material / piezas',
+      intro: (address) => `Por medio de la presente me permito enviar la cotización del material solicitado${address ? ' con destino a ' + address : ''}. Queda como sigue:`,
+      manoObraLabel: 'Instalación de material solicitado. Incluye: mano de obra especializada, materiales de fijación y conexión, herramientas y equipo necesario, maniobras de carga, descarga y colocación, pruebas de funcionamiento y puesta en marcha.'
+    },
+    compra_tierra: {
+      label: 'Compra de tierra',
+      intro: (address) => `Por medio de la presente me permito presentar la siguiente cotización para el suministro de tierra${address ? ' en ' + address : ''}. Queda como sigue:`,
+      manoObraLabel: 'Suministro, distribución y nivelación de tierra. Incluye: carga y transporte del material, descarga y maniobras en sitio, distribución y extendido con maquinaria, nivelación y compactación según especificaciones, retiro de sobrantes y limpieza del área.'
+    },
+    mantenimiento: {
+      label: 'Mantenimiento / servicio',
+      intro: (address) => `Por medio de la presente me permito dirigir la siguiente cotización para el servicio de mantenimiento${address ? ' en ' + address : ''}. Queda como sigue:`,
+      manoObraLabel: 'Servicio de mantenimiento y revisión. Incluye: mano de obra de técnicos especializados, materiales y refacciones de reposición, herramientas y equipo de diagnóstico, limpieza y calibración de componentes, pruebas de presión y funcionamiento, reporte técnico de actividades realizadas.'
+    },
+    otro: {
+      label: 'Otro (cotización general)',
+      intro: (address) => `Por medio de la presente me permito presentar la siguiente cotización${address ? ' para ' + address : ''}. Queda como sigue:`,
+      manoObraLabel: 'Instalación y puesta en marcha. Incluye: mano de obra especializada, materiales complementarios, herramientas y equipo requerido, maniobras de instalación, pruebas de funcionamiento y entrega.'
+    }
+  };
 
   const handleUnauthorized = async () => {
     alert('Tu sesión expiró. Inicia nuevamente.');
@@ -25,9 +56,11 @@ const QuotationsList = () => {
   };
 
   const getOwnerInfo = (quotation) => {
-    if (quotation?.owner_info) return quotation.owner_info;
-    if (!user) return null;
+    const stored = quotation?.owner_info || {};
+    if (!user) return stored;
+    // Los datos del perfil actual siempre sobreescriben el owner_info embebido
     return {
+      ...stored,
       name: user.name,
       email: user.email,
       phone: user.phone,
@@ -92,25 +125,93 @@ const QuotationsList = () => {
     }
   };
 
+  const doCombine = (sourceIndex, targetIndex) => {
+    const items = editingData.items;
+    const sourceItem = items[sourceIndex];
+    const targetItem = items[targetIndex];
+
+    const incluyeIdx = targetItem.description.indexOf('Incluye:');
+    const appendText = incluyeIdx !== -1
+      ? targetItem.description.substring(incluyeIdx)
+      : targetItem.description;
+
+    const sourceDesc = sourceItem.description.trimEnd();
+    const base = sourceDesc.endsWith('.') ? sourceDesc : sourceDesc + '.';
+    const mergedDescription = base + ' ' + appendText;
+    const mergedSubtotal = sourceItem.subtotal + targetItem.subtotal;
+
+    const { _isManoObra: _flag, ...sourceBase } = sourceItem;
+    const mergedItem = {
+      ...sourceBase,
+      description: mergedDescription,
+      quantity: 1,
+      unit_price: mergedSubtotal,
+      subtotal: mergedSubtotal
+    };
+
+    const firstIdx = Math.min(sourceIndex, targetIndex);
+    const newItems = items.filter((_, i) => i !== sourceIndex && i !== targetIndex);
+    newItems.splice(firstIdx, 0, mergedItem);
+
+    setEditingData({ ...editingData, items: newItems });
+    setCombiningFromIndex(null);
+  };
+
+  const startCombine = (index) => {
+    if (editingData.items.length === 2) {
+      doCombine(index, index === 0 ? 1 : 0);
+      return;
+    }
+    setCombiningFromIndex(index);
+  };
+
+  const cancelCombine = () => {
+    setCombiningFromIndex(null);
+  };
+
+  const executeCombine = (targetIndex) => {
+    if (combiningFromIndex === null || combiningFromIndex === targetIndex) return;
+    doCombine(combiningFromIndex, targetIndex);
+  };
+
   // Iniciar edición
   const startEdit = (quotation) => {
+    setCombiningFromIndex(null);
     setEditingId(quotation._id);
+
+    // Si tiene mano de obra, la inyectamos como item visible para poder combinarla
+    const items = [...quotation.items];
+    if (quotation.includeManoObra && quotation.manoObra > 0) {
+      const qType = quotation.quotation_type || 'instalacion_riego';
+      const manoObraLabel = QUOTATION_TYPES[qType]?.manoObraLabel ?? QUOTATION_TYPES.instalacion_riego.manoObraLabel;
+      items.push({
+        _isManoObra: true,
+        description: manoObraLabel,
+        quantity: 1,
+        unit: 'servicio',
+        unit_price: quotation.manoObra,
+        subtotal: quotation.manoObra
+      });
+    }
+
     setEditingData({
       client_name: quotation.client_name,
       client_email: quotation.client_email || '',
       client_phone: quotation.client_phone || '',
       client_address: quotation.client_address || '',
-      items: [...quotation.items],
+      items,
       includeIVA: quotation.includeIVA !== false,
-      includeManoObra: quotation.includeManoObra || false,
-      manoObra: quotation.manoObra || 0,
-      notes: quotation.notes || ''
+      includeManoObra: false,
+      manoObra: 0,
+      notes: quotation.notes || '',
+      quotation_type: quotation.quotation_type || 'instalacion_riego'
     });
     setExpandedId(quotation._id);
   };
 
   // Cancelar edición
   const cancelEdit = () => {
+    setCombiningFromIndex(null);
     setEditingId(null);
     setEditingData(null);
   };
@@ -118,14 +219,36 @@ const QuotationsList = () => {
   // Guardar edición
   const saveEdit = async () => {
     if (!editingData || !editingId) return;
-    
+
     setIsSaving(true);
     try {
+      // Separar el item virtual de mano de obra de los items reales
+      const manoObraVirtual = editingData.items.find(item => item._isManoObra);
+      const cleanItems = editingData.items
+        .filter(item => !item._isManoObra)
+        .map(({ _isManoObra, ...rest }) => rest);
+
+      const includeManoObra = !!manoObraVirtual;
+      const manoObraAmount = manoObraVirtual ? manoObraVirtual.subtotal : 0;
+      const subtotal = cleanItems.reduce((sum, item) => sum + item.subtotal, 0);
+      const subtotalWithManoObra = subtotal + manoObraAmount;
+      const iva = editingData.includeIVA ? subtotalWithManoObra * 0.16 : 0;
+      const total = subtotalWithManoObra + iva;
+
       const response = await fetch(`${API_URL}/quotations/${editingId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify(editingData)
+        body: JSON.stringify({
+          ...editingData,
+          items: cleanItems,
+          includeManoObra,
+          manoObra: manoObraAmount,
+          subtotal,
+          subtotalWithManoObra,
+          iva,
+          total
+        })
       });
 
       if (!response.ok) {
@@ -312,7 +435,8 @@ const QuotationsList = () => {
     // INTRO
     yPos += 8;
     doc.setFontSize(9.5);
-    const introText = `Por medio de la presente me permito dirigir la siguiente cotización para la instalación del sistema de riego${quotation.client_address ? ' en ' + quotation.client_address : ''}. Queda como sigue:`;
+    const qType = quotation.quotation_type || 'instalacion_riego';
+    const introText = QUOTATION_TYPES[qType]?.intro(quotation.client_address) ?? QUOTATION_TYPES.instalacion_riego.intro(quotation.client_address);
     const splitIntro = doc.splitTextToSize(introText, 180);
     doc.text(splitIntro, 15, yPos);
     
@@ -333,7 +457,7 @@ const QuotationsList = () => {
       tableData.push([
         (quotation.items.length + 1).toString(),
         '1',
-        'Instalación incluye: una cuadrilla de personal, apertura de cepas, instalación de tuberías, instalación de válvulas, conexiones eléctricas y aspersores. (incluye gastos indirectos)',
+        QUOTATION_TYPES[qType]?.manoObraLabel ?? QUOTATION_TYPES.instalacion_riego.manoObraLabel,
         'servicio',
         'Instalación',
         '$' + (quotation.manoObra || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })
@@ -465,7 +589,8 @@ const QuotationsList = () => {
     // INTRO
     yPos += 8;
     doc.setFontSize(9.5);
-    const introText = `Por medio de la presente me permito dirigir la siguiente cotización para la instalación del sistema de riego${quotation.client_address ? ' en ' + quotation.client_address : ''}. Queda como sigue:`;
+    const qType = quotation.quotation_type || 'instalacion_riego';
+    const introText = QUOTATION_TYPES[qType]?.intro(quotation.client_address) ?? QUOTATION_TYPES.instalacion_riego.intro(quotation.client_address);
     const splitIntro = doc.splitTextToSize(introText, 180);
     doc.text(splitIntro, 15, yPos);
     
@@ -485,7 +610,7 @@ const QuotationsList = () => {
       tableData.push([
         (quotation.items.length + 1).toString(),
         '1',
-        'Instalación incluye: una cuadrilla de personal, apertura de cepas, instalación de tuberías, instalación de válvulas, conexiones eléctricas y aspersores. (incluye gastos indirectos)',
+        QUOTATION_TYPES[qType]?.manoObraLabel ?? QUOTATION_TYPES.instalacion_riego.manoObraLabel,
         'servicio',
         'Instalación',
         '$' + (quotation.manoObra || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })
@@ -584,16 +709,38 @@ const QuotationsList = () => {
     );
   }
 
+  if (showManual) {
+    return (
+      <div className="ql-page" style={{ maxWidth: '1400px', margin: '0 auto', padding: '24px' }}>
+        <QuotationManual
+          onClose={() => setShowManual(false)}
+          onQuotationSaved={() => {
+            setShowManual(false);
+            fetchQuotations();
+          }}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="ql-page" style={{ maxWidth: '1400px', margin: '0 auto', padding: '24px' }}>
       <div style={{ background: 'white', borderRadius: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
         <div className="ql-header" style={{ background: 'linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%)', padding: '32px', color: 'white' }}>
           <div className="ql-header-top" style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
             <Droplets size={48} />
-            <div>
+            <div style={{ flex: 1 }}>
               <h1 style={{ fontSize: '28px', fontWeight: 'bold', margin: 0 }}>Cotizaciones Guardadas</h1>
               <p style={{ margin: '8px 0 0 0', opacity: 0.95 }}>Gestiona tus cotizaciones de sistemas de riego</p>
             </div>
+            <button
+              onClick={() => setShowManual(true)}
+              className="ql-manual-btn"
+              style={{ padding: '12px 20px', background: 'white', color: '#0369a1', border: 'none', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '700', fontSize: '14px', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}
+            >
+              <FilePlus size={18} />
+              Cotización Manual
+            </button>
           </div>
 
           <div className="ql-header-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
@@ -697,6 +844,23 @@ const QuotationsList = () => {
                             </div>
                           </div>
 
+                          {/* Tipo de cotización */}
+                          <div style={{ background: '#f0f9ff', padding: '16px', borderRadius: '8px', marginBottom: '20px', border: '2px solid #bae6fd' }}>
+                            <h5 style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '12px', color: '#0369a1' }}>Tipo de Cotización</h5>
+                            <select
+                              value={editingData.quotation_type}
+                              onChange={(e) => setEditingData({ ...editingData, quotation_type: e.target.value })}
+                              style={{ width: '100%', padding: '10px', border: '2px solid #bae6fd', borderRadius: '6px', fontSize: '14px', background: 'white', marginBottom: '8px' }}
+                            >
+                              {Object.entries(QUOTATION_TYPES).map(([key, val]) => (
+                                <option key={key} value={key}>{val.label}</option>
+                              ))}
+                            </select>
+                            <div style={{ fontSize: '12px', color: '#0369a1', fontStyle: 'italic', padding: '8px', background: 'white', borderRadius: '4px' }}>
+                              {QUOTATION_TYPES[editingData.quotation_type]?.intro(editingData.client_address || '[dirección]')}
+                            </div>
+                          </div>
+
                           {/* Datos del cliente */}
                           <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '8px', marginBottom: '20px' }}>
                             <h5 style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '12px', color: '#1e293b' }}>Datos del Cliente</h5>
@@ -724,29 +888,43 @@ const QuotationsList = () => {
                           <div style={{ marginBottom: '20px' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                               <h5 style={{ fontSize: '14px', fontWeight: 'bold', margin: 0, color: '#1e293b' }}>Productos</h5>
-                              <button 
-                                onClick={addNewProduct} 
-                                style={{ 
-                                  padding: '8px 16px', 
-                                  background: '#10b981', 
-                                  color: 'white', 
-                                  border: 'none', 
-                                  borderRadius: '6px', 
-                                  cursor: 'pointer', 
-                                  display: 'flex', 
-                                  alignItems: 'center', 
-                                  gap: '6px', 
-                                  fontSize: '13px', 
-                                  fontWeight: '600' 
+                              <button
+                                onClick={addNewProduct}
+                                style={{
+                                  padding: '8px 16px',
+                                  background: '#10b981',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '6px',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '6px',
+                                  fontSize: '13px',
+                                  fontWeight: '600'
                                 }}
                               >
                                 <Plus size={16} />
                                 Agregar Producto
                               </button>
                             </div>
-                            
+
+                            {combiningFromIndex !== null && (
+                              <div style={{ background: '#fef9c3', border: '1px solid #eab308', borderRadius: '8px', padding: '10px 14px', marginBottom: '12px', fontSize: '13px', color: '#92400e', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <Link size={14} />
+                                Selecciona el concepto con el que deseas combinar el elemento marcado en verde.
+                              </div>
+                            )}
+
                             {editingData.items.map((item, idx) => (
-                              <div key={idx} style={{ background: '#f8fafc', padding: '16px', borderRadius: '8px', marginBottom: '12px', border: '2px solid #e2e8f0' }}>
+                              <div key={idx} style={{
+                                background: combiningFromIndex === idx ? '#f0fdf4' : combiningFromIndex !== null ? '#fef9c3' : '#f8fafc',
+                                padding: '16px',
+                                borderRadius: '8px',
+                                marginBottom: '12px',
+                                border: combiningFromIndex === idx ? '2px solid #10b981' : combiningFromIndex !== null ? '2px dashed #eab308' : '2px solid #e2e8f0',
+                                cursor: combiningFromIndex !== null && combiningFromIndex !== idx ? 'pointer' : 'default'
+                              }}>
                                 <div style={{ display: 'grid', gap: '12px' }}>
                                   <div>
                                     <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '4px', color: '#64748b' }}>Descripción</label>
@@ -799,20 +977,26 @@ const QuotationsList = () => {
                                         ${item.subtotal.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
                                       </div>
                                     </div>
-                                    <button 
-                                      onClick={() => deleteEditingItem(idx)} 
-                                      style={{ 
-                                        padding: '10px', 
-                                        background: '#ef4444', 
-                                        color: 'white', 
-                                        border: 'none', 
-                                        borderRadius: '6px', 
-                                        cursor: 'pointer' 
-                                      }} 
-                                      title="Eliminar"
-                                    >
-                                      <Trash2 size={18} />
-                                    </button>
+                                    <div style={{ display: 'flex', gap: '4px' }}>
+                                      {combiningFromIndex === idx ? (
+                                        <button onClick={cancelCombine} style={{ padding: '10px', background: '#64748b', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }} title="Cancelar combinación">
+                                          <X size={18} />
+                                        </button>
+                                      ) : combiningFromIndex !== null ? (
+                                        <button onClick={() => executeCombine(idx)} style={{ padding: '10px', background: '#eab308', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: '600', whiteSpace: 'nowrap' }} title="Combinar aquí">
+                                          <Link size={14} /> Combinar
+                                        </button>
+                                      ) : (
+                                        <>
+                                          <button onClick={() => startCombine(idx)} style={{ padding: '10px', background: '#8b5cf6', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }} title="Combinar con otro concepto">
+                                            <Link size={18} />
+                                          </button>
+                                          <button onClick={() => deleteEditingItem(idx)} style={{ padding: '10px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }} title="Eliminar">
+                                            <Trash2 size={18} />
+                                          </button>
+                                        </>
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
                               </div>
